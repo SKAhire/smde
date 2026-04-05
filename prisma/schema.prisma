@@ -8,37 +8,131 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
-datasource db {
-  provider = "postgresql"
-}
-
-
-enum ExtractionStatus {
-  COMPLETE
-  FAILED
-  PROCESSING
-}
-
-enum Confidence {
-  HIGH
-  MEDIUM
-  LOW
-}
-
-enum JobStatus {
-  QUEUED
-  PROCESSING
-  COMPLETE
-  FAILED
-}
-
-enum ValidationStatus {
-  APPROVED
-  CONDITIONAL
-  REJECTED
-}
-
 model Session {
-  id           String         @id @default(uuid())
-  createdAt    DateTime       @default(now())
+  id           String   @id @default(uuid())
+  detectedRole String? // DECK | ENGINE | BOTH | N/A — null until first doc
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  extractions Extraction[]
+  jobs        Job[]
+  validations Validation[]
+
+  @@map("sessions")
+}
+
+model Extraction {
+  id        String  @id @default(uuid())
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  fileName String
+  fileHash String // SHA-256 — used for deduplication
+  mimeType String
+
+  documentType   String? // COC | PEME | PASSPORT | SIRB | etc.
+  documentName   String? // Human-readable name
+  category       String? // IDENTITY | CERTIFICATION | MEDICAL | TRAINING | etc.
+  applicableRole String? // DECK | ENGINE | BOTH | N/A
+  confidence     String? // HIGH | MEDIUM | LOW
+  status         String  @default("PROCESSING") // PROCESSING | COMPLETE | FAILED
+
+  holderName        String?
+  dateOfBirth       String?
+  sirbNumber        String?
+  passportNumber    String?
+  holderRank        String?
+  holderNationality String?
+  holderPhoto       String? // PRESENT | ABSENT
+
+  issueDate            String?
+  expiryDate           String? // "No Expiry" | "Lifetime" | date string | null
+  isExpired            Boolean  @default(false)
+  daysUntilExpiry      Int? // null if no expiry or already expired
+  revalidationRequired Boolean?
+
+  issuingAuthority    String?
+  regulationReference String?
+  imoModelCourse      String?
+
+  fitnessResult  String? // FIT | UNFIT | N/A
+  drugTestResult String? // NEGATIVE | POSITIVE | N/A
+
+  fieldsJson     String?
+  complianceJson String?
+  medicalJson    String?
+  flagsJson      String?
+
+  rawLlmResponse   String?
+  promptVersion    String?
+  processingTimeMs Int?
+
+  summary   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  job Job?
+
+  @@index([sessionId])
+  @@index([sessionId, documentType])
+  @@index([fileHash, sessionId])
+  @@index([isExpired, documentType])
+  @@index([expiryDate])
+  @@index([status])
+  @@map("extractions")
+}
+
+model Job {
+  id        String  @id @default(uuid())
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  extractionId String?     @unique
+  extraction   Extraction? @relation(fields: [extractionId], references: [id])
+
+  status       String  @default("QUEUED")
+  errorCode    String?
+  errorMessage String?
+  retryable    Boolean @default(false)
+
+  queuePosition Int?
+
+  // Webhooks logic: If i complete the tasks and still have time
+  webhookUrl       String?
+  webhookDelivered Boolean @default(false)
+
+  queuedAt    DateTime  @default(now())
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([status, queuedAt])
+  @@index([sessionId])
+  @@map("jobs")
+}
+
+model Validation {
+  id        String  @id @default(uuid())
+  sessionId String
+  session   Session @relation(fields: [sessionId], references: [id])
+
+  overallStatus String // APPROVED | CONDITIONAL | REJECTED
+  overallScore  Int // 0–100
+
+  holderProfileJson     String
+  consistencyChecksJson String
+  missingDocumentsJson  String
+  expiringDocumentsJson String
+  medicalFlagsJson      String
+  recommendationsJson   String
+
+  summary     String?
+  validatedAt DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([sessionId, validatedAt(sort: Desc)])
+  @@index([overallStatus])
+  @@map("validations")
 }
