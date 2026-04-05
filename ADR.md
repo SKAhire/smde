@@ -1,3 +1,4 @@
+
 ### Question 2 — Queue Choice
 
 After considering the pros and cons of BullMQ, pg-boss and "naive" polling queues, we decided to go with BullMQ.
@@ -9,6 +10,12 @@ For polling queues, even thought it don't need any external dependencies and wil
 For pg-boss, it covers most of the issues that we face like built-in retry, scheduling, concurrency control, SKIP LOCKED handled for you, It is completely dependent on the postgres so with 500+ jobs per minute putting real load on Postgres while it's also handling API reads/writes.
 
 Where in case with BullMQ we only have to configure our docker file to handle postgres and Radis to run the Redis. But it takes all the load from our db and also handles most of the issues we face with pg-boss and polling queues.
+
+### Question 3 — LLM Provider Abstraction
+
+We are using Swappable LLM providers. We have Gemini, Groq, Anthropic. We can change the provider by changing the env variables. We have created provider for each llm. And all 3 providers take same interface that is `extract(fileBuffer, mimeType, fileName)`. And returns raw string, which using our json util function we extract the object from it.
+
+The factory reads LLM_PROVIDER from env at startup and returns the correct provider based on the env variable. Our service only calls the createLLMProvider().
 
 ### Question 4 — Schema Design
 
@@ -44,3 +51,5 @@ So, to fix that we have created column such as documentType, isExpired, expiryDa
 For full-text search, we have 2 options use GIN indexes but it only returns exacts matches so if the format changes it won't work.
 
 And our second option is to create a new table which will have keys and values so the "all sessions where any document has an expired COC" query can be done.
+
+

@@ -6,6 +6,12 @@ const envSchema = z.object({
     .default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  LLM_PROVIDER: z.enum(["gemini", "groq", "anthropic"], {
+    message: "LLM_PROVIDER must be one of: gemini, groq, anthropic",
+  }),
+  LLM_MODEL: z.string().min(1, "LLM_MODEL is required"),
+  LLM_API_KEY: z.string().min(1, "LLM_API_KEY is required"),
+  LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
 });
 
 const parsed = envSchema.safeParse(process.env);

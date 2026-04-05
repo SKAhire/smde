@@ -24,22 +24,34 @@ export class ExtractionController {
       };
 
       const sessionId = req.body.sessionId as string | undefined;
-      const result = await this.extractionService.intake(file, sessionId);
+      const intakeResult = await this.extractionService.intake(file, sessionId);
 
-      if (result.isDuplicate) {
+      if (intakeResult.isDuplicate) {
         res.setHeader("X-Deduplicated", "true");
         res.status(200).json({
-          message: "Duplicate file detected. Returning existing extraction.",
-          extractionId: result.extractionId,
-          sessionId: result.sessionId,
+          extractionId: intakeResult.extractionId,
+          sessionId: intakeResult.sessionId,
         });
         return;
       }
 
-      res.status(202).json({
-        message: "File accepted. Processing will be implemented in next step.",
-        extractionId: result.extractionId,
-        sessionId: result.sessionId,
+      const result = await this.extractionService.processSync(
+        intakeResult.extractionId!,
+        file,
+      );
+
+      res.status(200).json({
+        id: intakeResult.extractionId,
+        sessionId: intakeResult.sessionId,
+        fileName: file.originalName,
+        ...result.detection,
+        holder: result.holder,
+        fields: result.fields,
+        validity: result.validity,
+        compliance: result.compliance,
+        medicalData: result.medicalData,
+        flags: result.flags,
+        summary: result.summary,
       });
     } catch (err) {
       next(err);
