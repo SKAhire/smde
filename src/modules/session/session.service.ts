@@ -46,7 +46,6 @@ export class SessionService {
     };
   }
 
-  // We'll wire in real pending jobs when the job module exists (step 6)
   private deriveOverallHealth(documents: SessionDocument[]): OverallHealth {
     const hasCritical = documents.some(
       (d) => d.criticalFlagCount > 0 || d.isExpired,

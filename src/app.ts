@@ -1,6 +1,7 @@
 import express, { Application, Request, Response } from "express";
 import { errorMiddleware } from "./middleware/error.middleware";
 import sessionRouter from "./modules/session/session.route";
+import extractionRouter from "./modules/extraction/extraction.route";
 import { prisma } from "./lib/prisma";
 
 const app: Application = express();
@@ -31,6 +32,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 app.use("/api/sessions", sessionRouter);
+app.use("/api/extract", extractionRouter);
 
 app.use((_req: Request, res: Response) => {
   res.status(404).json({
