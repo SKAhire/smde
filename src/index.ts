@@ -1,13 +1,10 @@
-import dotenv from "dotenv";
+import "dotenv/config";
+import { env } from "./config/env";
 import app from "./app";
 import { prisma } from "./lib/prisma";
 
-dotenv.config();
-
-const port = process.env.PORT || 3000;
-
-const server = app.listen(port, () => {
-  console.log(`🚀 Server is running on port ${port}`);
+const server = app.listen(env.PORT, () => {
+  console.log(`🚀 Server running on port ${env.PORT} [${env.NODE_ENV}]`);
 });
 
 const gracefulShutdown = async () => {
@@ -16,25 +13,21 @@ const gracefulShutdown = async () => {
   server.close(async () => {
     console.log("✅ HTTP server closed");
 
-    // Disconnect prisma client
     await prisma.$disconnect();
-    console.log("✅ Database connection closed");
+    console.log("✅ Database disconnected");
 
     process.exit(0);
   });
 
-  // Force shutdown after 10 seconds
   setTimeout(() => {
     console.error("⚠️ Forced shutdown after timeout");
     process.exit(1);
   }, 10000);
 };
 
-// Handle shutdown signals
 process.on("SIGTERM", gracefulShutdown);
 process.on("SIGINT", gracefulShutdown);
 
-// Handle unhandled promise rejections
 process.on("unhandledRejection", (reason, promise) => {
   console.error("❌ Unhandled Rejection at:", promise, "reason:", reason);
   gracefulShutdown();

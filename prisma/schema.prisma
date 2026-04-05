@@ -8,6 +8,10 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+datasource db {
+  provider = "postgresql"
+}
+
 model Session {
   id           String   @id @default(uuid())
   detectedRole String? // DECK | ENGINE | BOTH | N/A — null until first doc
