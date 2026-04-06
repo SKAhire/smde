@@ -13,7 +13,9 @@ export class JobRepository {
   async findById(jobId: string) {
     return prisma.job.findUnique({
       where: { id: jobId },
-      include: { extraction: { select: { fileName: true } } },
+      include: {
+        extraction: true,
+      },
     });
   }
 

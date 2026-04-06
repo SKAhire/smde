@@ -12,6 +12,7 @@ export interface JobSummary {
   status: JobStatus;
   sessionId: string;
   extractionId: string | null;
+  extraction: Record<string, unknown> | null;
   errorCode: string | null;
   errorMessage: string | null;
   retryable: boolean;

@@ -19,6 +19,7 @@ export class JobService {
       status: job.status as JobStatus,
       sessionId: job.sessionId,
       extractionId: job.extractionId,
+      extraction: job.extraction,
       errorCode: job.errorCode,
       errorMessage: job.errorMessage,
       retryable: job.retryable,
