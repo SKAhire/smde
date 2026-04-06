@@ -6,6 +6,7 @@ import { env } from "./config/env";
 import sessionRouter from "./modules/session/session.route";
 import extractionRouter from "./modules/extraction/extraction.route";
 import jobRouter from "./modules/job/job.route";
+import validationRouter from "./modules/validation/validation.route";
 
 const app: Application = express();
 
@@ -38,6 +39,7 @@ app.get("/api/health", async (_req, res) => {
 });
 
 app.use("/api/sessions", sessionRouter);
+app.use("/api/sessions/:sessionId", validationRouter);
 app.use("/api/extract", extractionRouter);
 app.use("/api/jobs", jobRouter);
 
