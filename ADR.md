@@ -1,3 +1,13 @@
+### Question 0 - Tech Stack and Design Choices
+
+We are using NodeJS with Typescript, Express, Postgres, Prisma, Redis, BullMQ, and Docker for Postgres and Redis. For the LLM we are using Gemini, Groq, Anthropic. We have created provider for each llm so we can change the provider by changing the env variables. 
+
+We are using Feature-based/Module-based architecture instead of Layer-based architecture. Because it is something i have been trying with my projects and i found that code management is way easier with Feature-based/Module-based architecture. So choose this structure is a personal choice. But if i was working with a team, I would prioritize dicussing this with the team and see if they are ok with it.
+
+### Question 1 — Sync vs Async
+
+Well even though it was fun to build a api which supports both sync and async, for production using sync is not a good idea in almost all cases. Because sync mode blocks the HTTP connection for the entire duration of the api call so until we get the response from the llm, so if 20 users upload at a time they will have to wait till the llm responses to the requests before them. Also under enough load this exhausts the connection pool and new requests start timing out before they're even processed. If i had to say, i can only think using sync in one scenario which is we only have one user and they are uploading only one document at a time.
+
 
 ### Question 2 — Queue Choice
 
