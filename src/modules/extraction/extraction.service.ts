@@ -11,7 +11,7 @@ import {
 import { hashFile, deleteTempFile } from "../../utils/hash.util";
 import { validateMimeType } from "../../utils/mime.util";
 import { createLLMProvider } from "../../llm/llm.factory";
-import { parseExtractionResponse } from "../../utils/json.util";
+import { LLMPipeline } from "../../llm/llm.pipeline";
 import { LLMExtractionResult } from "../../llm/llm.types";
 import { extractionQueue } from "../../queue/extraction.queue";
 import { env } from "../../config/env";
@@ -91,62 +91,62 @@ export class ExtractionService {
   ): Promise<LLMExtractionResult> {
     const startedAt = Date.now();
     const fileBuffer = fs.readFileSync(file.tempPath);
-    const provider = createLLMProvider();
-    let rawResponse = "";
+    const pipeline = new LLMPipeline(createLLMProvider());
 
-    try {
-      rawResponse = await provider.extract(
-        fileBuffer,
-        file.mimeType,
-        file.originalName,
-      );
-      const parsed = parseExtractionResponse<LLMExtractionResult>(rawResponse);
+    const outcome = await pipeline.run(
+      fileBuffer,
+      file.mimeType,
+      file.originalName,
+    );
 
-      await this.extractionRepo.update(extractionId, {
-        status: ExtractionStatus.COMPLETE,
-        documentType: parsed.detection.documentType,
-        documentName: parsed.detection.documentName,
-        category: parsed.detection.category,
-        applicableRole: parsed.detection.applicableRole,
-        confidence: parsed.detection.confidence,
-        holderName: parsed.holder.fullName ?? undefined,
-        dateOfBirth: parsed.holder.dateOfBirth ?? undefined,
-        sirbNumber: parsed.holder.sirbNumber ?? undefined,
-        passportNumber: parsed.holder.passportNumber ?? undefined,
-        holderRank: parsed.holder.rank ?? undefined,
-        holderNationality: parsed.holder.nationality ?? undefined,
-        holderPhoto: parsed.holder.photo,
-        issueDate: parsed.validity.dateOfIssue ?? undefined,
-        expiryDate: parsed.validity.dateOfExpiry ?? undefined,
-        isExpired: parsed.validity.isExpired,
-        daysUntilExpiry: parsed.validity.daysUntilExpiry ?? undefined,
-        revalidationRequired: parsed.validity.revalidationRequired ?? undefined,
-        issuingAuthority: parsed.compliance.issuingAuthority,
-        regulationReference: parsed.compliance.regulationReference ?? undefined,
-        imoModelCourse: parsed.compliance.imoModelCourse ?? undefined,
-        fitnessResult: parsed.medicalData.fitnessResult,
-        drugTestResult: parsed.medicalData.drugTestResult,
-        fieldsJson: JSON.stringify(parsed.fields),
-        complianceJson: JSON.stringify(parsed.compliance),
-        medicalJson: JSON.stringify(parsed.medicalData),
-        flagsJson: JSON.stringify(parsed.flags),
-        rawLlmResponse: rawResponse,
-        promptVersion: env.LLM_PROVIDER + "-" + env.LLM_MODEL,
-        processingTimeMs: Date.now() - startedAt,
-        summary: parsed.summary,
-      });
-
-      deleteTempFile(file.tempPath);
-      return parsed;
-    } catch (err) {
+    if (!outcome.success) {
       await this.extractionRepo.update(extractionId, {
         status: ExtractionStatus.FAILED,
-        rawLlmResponse: rawResponse,
+        rawLlmResponse: outcome.data.rawResponse,
         processingTimeMs: Date.now() - startedAt,
       });
       deleteTempFile(file.tempPath);
       throw new LLMParseError(extractionId);
     }
+
+    const { parsed, rawResponse } = outcome.data;
+
+    await this.extractionRepo.update(extractionId, {
+      status: ExtractionStatus.COMPLETE,
+      documentType: parsed.detection.documentType,
+      documentName: parsed.detection.documentName,
+      category: parsed.detection.category,
+      applicableRole: parsed.detection.applicableRole,
+      confidence: parsed.detection.confidence,
+      holderName: parsed.holder.fullName ?? undefined,
+      dateOfBirth: parsed.holder.dateOfBirth ?? undefined,
+      sirbNumber: parsed.holder.sirbNumber ?? undefined,
+      passportNumber: parsed.holder.passportNumber ?? undefined,
+      holderRank: parsed.holder.rank ?? undefined,
+      holderNationality: parsed.holder.nationality ?? undefined,
+      holderPhoto: parsed.holder.photo,
+      issueDate: parsed.validity.dateOfIssue ?? undefined,
+      expiryDate: parsed.validity.dateOfExpiry ?? undefined,
+      isExpired: parsed.validity.isExpired,
+      daysUntilExpiry: parsed.validity.daysUntilExpiry ?? undefined,
+      revalidationRequired: parsed.validity.revalidationRequired ?? undefined,
+      issuingAuthority: parsed.compliance.issuingAuthority,
+      regulationReference: parsed.compliance.regulationReference ?? undefined,
+      imoModelCourse: parsed.compliance.imoModelCourse ?? undefined,
+      fitnessResult: parsed.medicalData.fitnessResult,
+      drugTestResult: parsed.medicalData.drugTestResult,
+      fieldsJson: JSON.stringify(parsed.fields),
+      complianceJson: JSON.stringify(parsed.compliance),
+      medicalJson: JSON.stringify(parsed.medicalData),
+      flagsJson: JSON.stringify(parsed.flags),
+      rawLlmResponse: rawResponse,
+      promptVersion: env.LLM_PROVIDER + "-" + env.LLM_MODEL,
+      processingTimeMs: Date.now() - startedAt,
+      summary: parsed.summary,
+    });
+
+    deleteTempFile(file.tempPath);
+    return parsed;
   }
 
   async enqueueAsync(

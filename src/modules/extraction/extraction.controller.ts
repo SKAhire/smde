@@ -25,9 +25,9 @@ export class ExtractionController {
 
       const sessionId = req.body.sessionId as string | undefined;
       const mode =
-        (req.query.mode as string) === ExtractionMode.ASYNC
-          ? ExtractionMode.ASYNC
-          : ExtractionMode.SYNC;
+        (req.query.mode as string) === ExtractionMode.SYNC
+          ? ExtractionMode.SYNC
+          : ExtractionMode.ASYNC;
 
       const intakeResult = await this.extractionService.intake(file, sessionId);
 
