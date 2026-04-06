@@ -2,6 +2,8 @@ import "dotenv/config";
 import { env } from "./config/env";
 import app from "./app";
 import { prisma } from "./lib/prisma";
+import { redisConnection } from "./lib/redis";
+import "./workers/extraction.worker";
 
 const server = app.listen(env.PORT, () => {
   console.log(`🚀 Server running on port ${env.PORT} [${env.NODE_ENV}]`);
@@ -15,6 +17,9 @@ const gracefulShutdown = async () => {
 
     await prisma.$disconnect();
     console.log("✅ Database disconnected");
+
+    await redisConnection.quit();
+    console.log("✅ Redis disconnected");
 
     process.exit(0);
   });

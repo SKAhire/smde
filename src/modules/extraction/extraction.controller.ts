@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { ExtractionService } from "./extraction.service";
-import { IncomingFile } from "./extraction.types";
+import { ExtractionMode, IncomingFile } from "./extraction.types";
 
 export class ExtractionController {
   constructor(private readonly extractionService: ExtractionService) {}
@@ -24,6 +24,11 @@ export class ExtractionController {
       };
 
       const sessionId = req.body.sessionId as string | undefined;
+      const mode =
+        (req.query.mode as string) === ExtractionMode.ASYNC
+          ? ExtractionMode.ASYNC
+          : ExtractionMode.SYNC;
+
       const intakeResult = await this.extractionService.intake(file, sessionId);
 
       if (intakeResult.isDuplicate) {
@@ -31,6 +36,22 @@ export class ExtractionController {
         res.status(200).json({
           extractionId: intakeResult.extractionId,
           sessionId: intakeResult.sessionId,
+        });
+        return;
+      }
+
+      if (mode === ExtractionMode.ASYNC) {
+        const jobId = await this.extractionService.enqueueAsync(
+          intakeResult.extractionId!,
+          intakeResult.sessionId,
+          file,
+        );
+
+        res.status(202).json({
+          jobId,
+          sessionId: intakeResult.sessionId,
+          status: "QUEUED",
+          pollUrl: `/api/jobs/${jobId}`,
         });
         return;
       }

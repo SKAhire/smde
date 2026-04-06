@@ -1,6 +1,7 @@
 import fs from "fs";
 import { ExtractionRepository } from "./extraction.repository";
 import { SessionRepository } from "../session/session.repository";
+import { JobRepository } from "../job/job.repository";
 import { IncomingFile, ExtractionStatus } from "./extraction.types";
 import {
   SessionNotFoundError,
@@ -12,12 +13,14 @@ import { validateMimeType } from "../../utils/mime.util";
 import { createLLMProvider } from "../../llm/llm.factory";
 import { parseExtractionResponse } from "../../utils/json.util";
 import { LLMExtractionResult } from "../../llm/llm.types";
+import { extractionQueue } from "../../queue/extraction.queue";
 import { env } from "../../config/env";
 
 export class ExtractionService {
   constructor(
     private readonly extractionRepo: ExtractionRepository,
     private readonly sessionRepo: SessionRepository,
+    private readonly jobRepo: JobRepository,
   ) {}
 
   async intake(
@@ -144,5 +147,30 @@ export class ExtractionService {
       deleteTempFile(file.tempPath);
       throw new LLMParseError(extractionId);
     }
+  }
+
+  async enqueueAsync(
+    extractionId: string,
+    sessionId: string,
+    file: IncomingFile,
+  ): Promise<string> {
+    const job = await this.jobRepo.create({
+      sessionId,
+      extractionId,
+      status: "QUEUED",
+    });
+
+    await extractionQueue.add(
+      "extract",
+      {
+        extractionId,
+        filePath: file.tempPath,
+        fileName: file.originalName,
+        mimeType: file.mimeType,
+      },
+      { jobId: job.id },
+    );
+
+    return job.id;
   }
 }

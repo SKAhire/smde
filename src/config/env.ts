@@ -6,6 +6,9 @@ const envSchema = z.object({
     .default("development"),
   PORT: z.coerce.number().int().positive().default(3000),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+  REDIS_HOST: z.string().default("localhost"),
+  REDIS_PORT: z.coerce.number().int().positive().default(6379),
+  REDIS_PASSWORD: z.string().optional(),
   LLM_PROVIDER: z.enum(["gemini", "groq", "anthropic"], {
     message: "LLM_PROVIDER must be one of: gemini, groq, anthropic",
   }),
