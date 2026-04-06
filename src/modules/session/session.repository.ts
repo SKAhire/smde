@@ -16,6 +16,14 @@ export class SessionRepository {
         extractions: {
           orderBy: { createdAt: "asc" },
         },
+        jobs: {
+          where: { status: { in: ["QUEUED", "PROCESSING"] } },
+          select: {
+            id: true,
+            status: true,
+            extraction: { select: { fileName: true } },
+          },
+        },
       },
     });
   }

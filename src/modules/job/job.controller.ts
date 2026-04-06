@@ -78,7 +78,9 @@ export class JobController {
               compliance: e.complianceJson
                 ? JSON.parse(e.complianceJson as string)
                 : null,
-              medicalData: e.medicalJson ? JSON.parse(e.medicalJson as string) : null,
+              medicalData: e.medicalJson
+                ? JSON.parse(e.medicalJson as string)
+                : null,
               fields: e.fieldsJson ? JSON.parse(e.fieldsJson as string) : [],
               flags: e.flagsJson ? JSON.parse(e.flagsJson as string) : [],
               summary: e.summary,

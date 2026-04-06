@@ -4,6 +4,7 @@ import {
   SessionDocument,
   SessionSummary,
   OverallHealth,
+  PendingJob,
   parseFlagsJson,
 } from "./session.types";
 import { SessionNotFoundError } from "../../middleware/error.middleware";
@@ -36,29 +37,25 @@ export class SessionService {
       };
     });
 
+    const pendingJobs: PendingJob[] = session.jobs.map((job) => ({
+      jobId: job.id,
+      status: job.status,
+      fileName: job.extraction?.fileName ?? null,
+    }));
+
     return {
       sessionId: session.id,
       documentCount: session.extractions.length,
       detectedRole: session.detectedRole,
-      overallHealth: this.deriveOverallHealth(documents),
+      overallHealth: this.deriveOverallHealth(
+        documents,
+        pendingJobs.length > 0,
+      ),
       documents,
-      pendingJobs: [],
+      pendingJobs,
     };
   }
 
-  private deriveOverallHealth(documents: SessionDocument[]): OverallHealth {
-    const hasCritical = documents.some(
-      (d) => d.criticalFlagCount > 0 || d.isExpired,
-    );
-    if (hasCritical) return OverallHealth.CRITICAL;
-
-    const hasWarn = documents.some((d) => d.flagCount > 0);
-    if (hasWarn) return OverallHealth.WARN;
-
-    return OverallHealth.OK;
-  }
-
-  // Called by extraction service after a document is processed
   async refreshDetectedRole(sessionId: string): Promise<void> {
     const session = await this.sessionRepo.findById(sessionId);
     if (!session) return;
@@ -77,5 +74,24 @@ export class SessionService {
     else detectedRole = "N/A";
 
     await this.sessionRepo.updateDetectedRole(sessionId, detectedRole);
+  }
+
+  private deriveOverallHealth(
+    documents: SessionDocument[],
+    hasPendingJobs: boolean,
+  ): OverallHealth {
+    if (hasPendingJobs) return OverallHealth.WARN;
+
+    for (const doc of documents) {
+      if (doc.criticalFlagCount > 0 || doc.isExpired)
+        return OverallHealth.CRITICAL;
+    }
+
+    for (const doc of documents) {
+      if (doc.flagCount > 0) return OverallHealth.WARN;
+      if (doc.isExpired !== null && doc.isExpired) return OverallHealth.WARN;
+    }
+
+    return OverallHealth.OK;
   }
 }

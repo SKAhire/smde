@@ -1,6 +1,7 @@
 import fs from "fs";
 import { ExtractionRepository } from "./extraction.repository";
 import { SessionRepository } from "../session/session.repository";
+import { SessionService } from "../session/session.service";
 import { JobRepository } from "../job/job.repository";
 import { IncomingFile, ExtractionStatus } from "./extraction.types";
 import {
@@ -17,11 +18,15 @@ import { extractionQueue } from "../../queue/extraction.queue";
 import { env } from "../../config/env";
 
 export class ExtractionService {
+  private readonly sessionService: SessionService;
+
   constructor(
     private readonly extractionRepo: ExtractionRepository,
     private readonly sessionRepo: SessionRepository,
     private readonly jobRepo: JobRepository,
-  ) {}
+  ) {
+    this.sessionService = new SessionService(sessionRepo);
+  }
 
   async intake(
     file: IncomingFile,
@@ -144,6 +149,12 @@ export class ExtractionService {
       processingTimeMs: Date.now() - startedAt,
       summary: parsed.summary,
     });
+
+    // Refresh session role after every successful extraction
+    const extraction = await this.extractionRepo.findById(extractionId);
+    if (extraction) {
+      await this.sessionService.refreshDetectedRole(extraction.sessionId);
+    }
 
     deleteTempFile(file.tempPath);
     return parsed;
