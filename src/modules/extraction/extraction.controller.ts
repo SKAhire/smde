@@ -24,12 +24,11 @@ export class ExtractionController {
       };
 
       const sessionId = req.body.sessionId as string | undefined;
-      const SIZE_THRESHOLD_BYTES = 100 * 1024; // 100KB
+      const SIZE_THRESHOLD_BYTES = 100 * 1024;
 
       const isAsyncRequested =
         (req.query.mode as string) === ExtractionMode.ASYNC;
       const isFileTooLarge = file.sizeBytes > SIZE_THRESHOLD_BYTES;
-
       const mode =
         isAsyncRequested || isFileTooLarge
           ? ExtractionMode.ASYNC
@@ -38,10 +37,36 @@ export class ExtractionController {
       const intakeResult = await this.extractionService.intake(file, sessionId);
 
       if (intakeResult.isDuplicate) {
+        const e = intakeResult.duplicateExtraction;
         res.setHeader("X-Deduplicated", "true");
         res.status(200).json({
-          extractionId: intakeResult.extractionId,
+          id: intakeResult.extractionId,
           sessionId: intakeResult.sessionId,
+          fileName: e?.fileName,
+          documentType: e?.documentType,
+          documentName: e?.documentName,
+          category: e?.category,
+          applicableRole: e?.applicableRole,
+          confidence: e?.confidence,
+          holderName: e?.holderName,
+          dateOfBirth: e?.dateOfBirth,
+          sirbNumber: e?.sirbNumber,
+          passportNumber: e?.passportNumber,
+          isExpired: e?.isExpired,
+          validity: {
+            dateOfIssue: e?.issueDate,
+            dateOfExpiry: e?.expiryDate,
+            isExpired: e?.isExpired,
+            daysUntilExpiry: e?.daysUntilExpiry,
+            revalidationRequired: e?.revalidationRequired,
+          },
+          compliance: e?.complianceJson ? JSON.parse(e.complianceJson) : null,
+          medicalData: e?.medicalJson ? JSON.parse(e.medicalJson) : null,
+          fields: e?.fieldsJson ? JSON.parse(e.fieldsJson) : [],
+          flags: e?.flagsJson ? JSON.parse(e.flagsJson) : [],
+          summary: e?.summary,
+          processingTimeMs: e?.processingTimeMs,
+          createdAt: e?.createdAt,
         });
         return;
       }

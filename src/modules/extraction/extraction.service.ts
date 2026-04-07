@@ -36,6 +36,7 @@ export class ExtractionService {
     fileHash: string;
     extractionId: string | null;
     isDuplicate: boolean;
+    duplicateExtraction?: Awaited<ReturnType<ExtractionRepository["findById"]>>;
   }> {
     const { valid, detectedMime } = validateMimeType(
       file.tempPath,
@@ -66,11 +67,15 @@ export class ExtractionService {
     );
     if (existing) {
       deleteTempFile(file.tempPath);
+      const duplicateExtraction = await this.extractionRepo.findById(
+        existing.id,
+      );
       return {
         sessionId: resolvedSessionId,
         fileHash,
         extractionId: existing.id,
         isDuplicate: true,
+        duplicateExtraction,
       };
     }
 
@@ -150,7 +155,6 @@ export class ExtractionService {
       summary: parsed.summary,
     });
 
-    // Refresh session role after every successful extraction
     const extraction = await this.extractionRepo.findById(extractionId);
     if (extraction) {
       await this.sessionService.refreshDetectedRole(extraction.sessionId);
