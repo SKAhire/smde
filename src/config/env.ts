@@ -14,7 +14,7 @@ const envSchema = z.object({
   }),
   LLM_MODEL: z.string().min(1, "LLM_MODEL is required"),
   LLM_API_KEY: z.string().min(1, "LLM_API_KEY is required"),
-  LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(30000),
+  LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(60000),
 });
 
 const parsed = envSchema.safeParse(process.env);
