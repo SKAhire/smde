@@ -24,10 +24,16 @@ export class ExtractionController {
       };
 
       const sessionId = req.body.sessionId as string | undefined;
+      const SIZE_THRESHOLD_BYTES = 100 * 1024; // 100KB
+
+      const isAsyncRequested =
+        (req.query.mode as string) === ExtractionMode.ASYNC;
+      const isFileTooLarge = file.sizeBytes > SIZE_THRESHOLD_BYTES;
+
       const mode =
-        (req.query.mode as string) === ExtractionMode.SYNC
-          ? ExtractionMode.SYNC
-          : ExtractionMode.ASYNC;
+        isAsyncRequested || isFileTooLarge
+          ? ExtractionMode.ASYNC
+          : ExtractionMode.SYNC;
 
       const intakeResult = await this.extractionService.intake(file, sessionId);
 
